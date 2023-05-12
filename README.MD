@@ -7,9 +7,9 @@
 Половников Владислав Олегович</h3>
 
 <br>
-<h3>Лабораторная работа №3
+<h3>Лабораторная работа №2
 <br>
-“quizViewModel.”
+“Android и модель MVC”
 <br>
 01.03.02 Прикладная математика и информатика</h3>
 <br>
@@ -43,11 +43,15 @@ Kotlin - это высокоэффективный современный язы
 
 <h3 align="center">Задание</h3>
 
-1.	Предотвращение ввода нескольких ответов.
-После того как пользователь введет ответ на вопрос, заблокируйте кнопки этого вопроса, чтобы предотвратить возможность ввода нескольких ответов. 
-2.	Вывод оценки.
-После того как пользователь введет ответ на все вопросы, отобразите уведомление с процентом правильных ответов. 
+1. Добавление слушателя для TextView 
+Кнопка NEXT удобна, но было бы неплохо, если бы пользователь мог переходить к следующему вопросу простым нажатием на виджет TextView. 
+Подсказка. Для TextView можно использовать слушателя View.OnClickListener, который использовался с Button, потому что класс TextView также является производным от View.
 
+2. Добавление кнопки возврата
+Добавьте кнопку для возвращения к предыдущему вопросу. Пользовательский интерфейс должен выглядеть примерно так, как показано на рис. 2.13. 
+
+3. От Button к ImageButton 
+Возможно, пользовательский интерфейс будет смотреться еще лучше, если на кнопках будут отображаться только значки, как на рис. 2.14.
 
 
 
@@ -58,23 +62,13 @@ Kotlin - это высокоэффективный современный язы
 ```kotlin
 package com.example.lab2
 
-import android.media.Image
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProviders
-
-private const val TAG = "MainActivity"
-private const val KEY_CURRENTINDEX = "current_index"
-private const val KEY_COUNTANSWER = "count_answer"
-private const val KEY_CORRECTANSWER = "correct_answer"
-private const val KEY_GETANSWER = "get_answer"
 
 
 class MainActivity : AppCompatActivity() {
@@ -85,22 +79,19 @@ class MainActivity : AppCompatActivity() {
     private lateinit var questionTextView: TextView
     private lateinit var prevButton: ImageButton
 
-    private val quizViewModel: QuizViewModel by lazy {
-        ViewModelProviders.of(this).get(QuizViewModel::class.java)
-    }
+    private val questionBank = listOf(
+        Question(R.string.question_australia,true),
+        Question(R.string.question_oceans,true),
+        Question(R.string.question_mideast,false),
+        Question(R.string.question_africa,false),
+        Question(R.string.question_americas,true),
+        Question(R.string.question_asia,true))
+
+    private var currentIndex = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d(TAG,"OnCreate(Bundle?) called")
         setContentView(R.layout.activity_main)
-
-        if (savedInstanceState != null) {
-            quizViewModel.currentIndex = savedInstanceState.getInt(KEY_CURRENTINDEX,0)
-            quizViewModel.countAnswers = savedInstanceState.getInt(KEY_COUNTANSWER,0)
-            quizViewModel.countCorrectAnswers = savedInstanceState.getDouble(KEY_CORRECTANSWER,0.0)
-            quizViewModel.getAnswer = savedInstanceState?.getBooleanArray(KEY_GETANSWER) ?: BooleanArray(5)
-        }
-
 
         trueButton = findViewById(R.id.true_button)
         falseButton = findViewById(R.id.false_button)
@@ -115,125 +106,45 @@ class MainActivity : AppCompatActivity() {
             checkAnswer(false)
         }
         nextButton.setOnClickListener {
-            quizViewModel.currentIndex = (quizViewModel.currentIndex + 1) % quizViewModel.questionBank.size
+            currentIndex = (currentIndex+1) % questionBank.size
             questionUpdate()
         }
 
         questionTextView.setOnClickListener {
-            quizViewModel.currentIndex = (quizViewModel.currentIndex + 1) % quizViewModel.questionBank.size
+            currentIndex = (currentIndex + 1) % questionBank.size
             questionUpdate()
         }
 
         prevButton.setOnClickListener{
-            if (quizViewModel.currentIndex == 0) {
-                quizViewModel.currentIndex = quizViewModel.questionBank.size - 1
-            }
-            else{
-                quizViewModel.currentIndex--
-            }
+            if (currentIndex == 0)
+                currentIndex = questionBank.size-1
+            else
+                currentIndex--
             questionUpdate()
         }
         questionUpdate()
     }
 
-    override fun onStart(){
-        super.onStart()
-        Log.d(TAG, "OnStart() called")
-    }
-
-    override fun onResume(){
-        super.onResume()
-        Log.d(TAG, "OnResume() called")
-    }
-
-    override fun onPause(){
-        super.onPause()
-        Log.d(TAG, "OnPause called")
-    }
-    override fun onSaveInstanceState(savedInstanceState: Bundle) {
-        super.onSaveInstanceState(savedInstanceState)
-        Log.i(TAG, "onSaveInstanceState")
-        savedInstanceState.putInt(KEY_CURRENTINDEX, quizViewModel.currentIndex)
-        savedInstanceState.putDouble(KEY_CORRECTANSWER, quizViewModel.countCorrectAnswers)
-        savedInstanceState.putInt(KEY_COUNTANSWER, quizViewModel.countAnswers)
-        savedInstanceState.putBooleanArray(KEY_GETANSWER,quizViewModel.getAnswer)
-    }
-    override fun onStop(){
-        super.onStop()
-        Log.d(TAG, "OnStop() called")
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        Log.d(TAG, "OnDestroy() called")
-    }
-
     private fun questionUpdate(){
-        val questionTextResId = quizViewModel.questionBank[quizViewModel.currentIndex].textResId
+        val questionTextResId = questionBank[currentIndex].textResId
         questionTextView.setText(questionTextResId)
-
-        if(quizViewModel.getAnswer[quizViewModel.currentIndex]){
-            trueButton.isEnabled = false
-            falseButton.isEnabled = false
-        }
-        else{
-            trueButton.isEnabled = true
-            falseButton.isEnabled = true
-        }
     }
 
     private fun checkAnswer(userAnswer: Boolean){
-        val correctAnswer = quizViewModel.questionBank[quizViewModel.currentIndex].answer
-        trueButton.isEnabled = false
-        falseButton.isEnabled = false
-        quizViewModel.getAnswer[quizViewModel.currentIndex] = true
-        quizViewModel.countAnswers++
+        val correctAnswer = questionBank[currentIndex].answer
 
-        if (userAnswer == correctAnswer) {
-            quizViewModel.countCorrectAnswers++
+        val messageResId = if (userAnswer == correctAnswer) {
+            R.string.correct_toast
+        } else{
+            R.string.incorrect_toast
         }
 
-        if (quizViewModel.countAnswers == quizViewModel.questionBank.size){
-
-            val value = (quizViewModel.countCorrectAnswers/(quizViewModel.questionBank.size))*100
-
-            var result = "Correct answers is: " + Math.round(value) + "%"
-            Toast.makeText(this,result,Toast.LENGTH_SHORT).show()
-        }
-
+        Toast.makeText(this, messageResId, Toast.LENGTH_SHORT).show()
     }
 
 }
-```
-
-<h2 align="center">QuizViewModel</h2>
-
-```kotlin
-package com.example.lab2
-
-import androidx.lifecycle.ViewModel
-
-
-private const val TAG = "QuizViewModel"
-
-class QuizViewModel : ViewModel() {
-     val questionBank = listOf(
-        Question(R.string.question_australia,true),
-        Question(R.string.question_oceans,true),
-        Question(R.string.question_mideast,false),
-        Question(R.string.question_africa,false),
-        Question(R.string.question_americas,true),
-        Question(R.string.question_asia,true))
-
-    var currentIndex = 0
-    var countAnswers = 0
-    var countCorrectAnswers = 0.0
-    var getAnswer = BooleanArray(questionBank.size)
-
-}
 
 ```
-
 
 <h2 align="center">activity_main</h2>
 
@@ -245,7 +156,6 @@ class QuizViewModel : ViewModel() {
     xmlns:tools="http://schemas.android.com/tools"
     android:gravity="center"
     android:orientation="vertical">
-
     <TextView
         android:id="@+id/question_text_view"
         android:layout_width="wrap_content"
@@ -253,7 +163,6 @@ class QuizViewModel : ViewModel() {
         android:gravity="center"
         android:padding="24dp"
         tools:text="@string/question_australia" />
-
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -270,7 +179,6 @@ class QuizViewModel : ViewModel() {
             android:layout_height="wrap_content"
             android:text="@string/false_button" />
     </LinearLayout>
-
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -280,7 +188,7 @@ class QuizViewModel : ViewModel() {
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@drawable/arrow_left"
-            android:contentDescription="Previous"
+            android:contentDescription="Prev"
             />
         <ImageButton
             android:id="@+id/next_button"
@@ -289,70 +197,10 @@ class QuizViewModel : ViewModel() {
             android:src="@drawable/arrow_right"
             android:contentDescription="Next"/>
     </LinearLayout>
-
 </LinearLayout>
 
 ```
 
-<h2 align="center">Landscape activity_main</h2>
-
-```kotlin
-<?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:gravity="center"
-    android:orientation="horizontal"
-    tools:context=".MainActivity">
-
-    <TextView
-        android:id="@+id/question_text_view"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="100dp"
-        android:padding="24dp"
-        tools:text="@string/question_australia"/>
-
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_vertical|center_horizontal">
-
-        <Button
-            android:id="@+id/true_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/true_button" />
-
-        <Button
-            android:id="@+id/false_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/false_button" />
-    </LinearLayout>
-
-    <ImageButton
-        android:id="@+id/prev_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@drawable/arrow_left"
-        android:layout_gravity="bottom|left"
-        android:contentDescription="Previous question"/>
-
-    <ImageButton
-        android:id="@+id/next_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@drawable/arrow_right"
-        android:layout_gravity="bottom|right"
-        android:contentDescription="Next question"/>
-
-
-</FrameLayout>
-
-```
 
 <h2 align="center">strings</h2>
 
@@ -370,10 +218,8 @@ class QuizViewModel : ViewModel() {
     <string name="question_africa">The source of the Nile River is in Egypt.</string>
     <string name="question_americas">The Amazon River is the longest river in the Americas.</string>
     <string name="question_asia">Lake Baikal is the world\'s oldest and deepest freshwater lake.</string>
-    <string name="next_button">Next</string>
-    <string name="prev_button">Prev</string>
 </resources>
 
 ```
 <h2 align="center">Вывод</h2>
-Я научился передавать состояние при повороте экрана
+Я научился создавать динамический опросник и кнопки перехода между вопросами
